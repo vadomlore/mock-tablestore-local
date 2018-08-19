@@ -20,15 +20,19 @@ public class MockSyncClient implements InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         switch (method.getName()) {
             case "getRow":
-                return store.noConditionGetRow((GetRowRequest) args[0]);
+                return store.inMemoryTableInstanceManager.noConditionGetRow((GetRowRequest) args[0]);
             case "putRow":
-                return store.noConditionPutRow((PutRowRequest) args[0]);
+                return store.inMemoryTableInstanceManager.noConditionPutRow((PutRowRequest) args[0]);
             case "updateRow":
-                return store.noConditionUpdateRow((UpdateRowRequest) args[0]);
+                return store.inMemoryTableInstanceManager.noConditionUpdateRow((UpdateRowRequest) args[0]);
             case "createTable":
                 return store.createTable((CreateTableRequest) args[0]);
             case "deleteTable":
                 return store.deleteTable((DeleteTableRequest) args[0]);
+            case "batchGetRow":
+                return store.inMemoryTableInstanceManager.batchGetRow((BatchGetRowRequest) args[0]);
+            case "batchWriteRow":
+                return store.inMemoryTableInstanceManager.batchWriteRow((BatchWriteRowRequest) args[0]);
         }
         if (((method.getModifiers() & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC)) ==
                 Modifier.PUBLIC) && method.getDeclaringClass().isInterface()) {

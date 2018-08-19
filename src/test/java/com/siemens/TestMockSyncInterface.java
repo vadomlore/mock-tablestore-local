@@ -11,7 +11,8 @@ import org.junit.Test;
 
 import java.lang.reflect.Proxy;
 
-public class TestMockSyncClient {
+public class TestMockSyncInterface {
+
     SimpleInMemoryTableStore simpleInMemoryTableStore = new SimpleInMemoryTableStore();
 
     SyncClientInterface syncClient = (SyncClientInterface) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(), SyncClient.class.getInterfaces(), new MockSyncClient(
@@ -20,25 +21,24 @@ public class TestMockSyncClient {
 
 
     @Test
-    public void doDefault(){
+    public void doDefault() {
         Assert.assertNotNull(syncClient.toString());
     }
 
 
     @Test(expected = UnsupportedOperationException.class)
-    public void testNotSupportClass(){
+    public void testNotSupportClass() {
         syncClient.asAsyncClient();
     }
 
 
-
     @Before
-    public void setUp(){
+    public void setUp() {
         simpleInMemoryTableStore.clean();
     }
 
     @After
-    public void tearDown(){
+    public void tearDown() {
         simpleInMemoryTableStore.clean();
     }
 
@@ -47,7 +47,7 @@ public class TestMockSyncClient {
 
 
     @Test
-    public void testCreateTable(){
+    public void testCreateTable() {
         TableMeta meta = createTable();
         Assert.assertEquals(simpleInMemoryTableStore.getTableMeta(CST), meta);
     }
@@ -63,7 +63,7 @@ public class TestMockSyncClient {
     }
 
     @Test(expected = TableStoreException.class)
-    public void testCreateTableWhenTableExists(){
+    public void testCreateTableWhenTableExists() {
         TableMeta meta = new TableMeta(CST);
         meta.addPrimaryKeyColumn(
                 new PrimaryKeySchema("pk1", PrimaryKeyType.STRING));
@@ -73,7 +73,7 @@ public class TestMockSyncClient {
         syncClient.createTable(createTableRequest);
     }
 
-    public void deleteTable(){
+    public void deleteTable() {
         TableMeta meta = createTable();
 
         syncClient.deleteTable(new DeleteTableRequest(CST));
@@ -82,7 +82,7 @@ public class TestMockSyncClient {
 
 
     @Test(expected = TableStoreException.class)
-    public void deleteTableWhenTableNotExists(){
+    public void deleteTableWhenTableNotExists() {
         TableMeta meta = createTable();
 
         syncClient.deleteTable(new DeleteTableRequest(CST));
@@ -90,7 +90,7 @@ public class TestMockSyncClient {
     }
 
     @Test
-    public void testPutRow(){
+    public void testPutRow() {
         createTable();
 
         PutRowRequest putRowRequest = new PutRowRequest();
@@ -128,9 +128,57 @@ public class TestMockSyncClient {
 
     }
 
+    @Test
+    public void testBatchPutRowAndResponse() {
+        createTable();
+
+        BatchWriteRowRequest putRowRequest = new BatchWriteRowRequest();
+
+        PrimaryKey primaryKey0 = PrimaryKeyBuilder
+                .createPrimaryKeyBuilder()
+                .addPrimaryKeyColumn(
+                        new PrimaryKeyColumn("pk1", PrimaryKeyValue.fromString("aa")))
+                .build();
+        RowPutChange change0 = new RowPutChange(CST,
+                primaryKey0);
+        change0.addColumn(new Column("co0", ColumnValue.fromBoolean(true)));
+        change0.addColumn(new Column("co1", ColumnValue.fromString("a")));
+        change0.addColumn(new Column("co2", ColumnValue.fromLong(1)));
+        putRowRequest.addRowChange(change0);
+
+        PrimaryKey primaryKey1 = PrimaryKeyBuilder
+                .createPrimaryKeyBuilder()
+                .addPrimaryKeyColumn(
+                        new PrimaryKeyColumn("pk2", PrimaryKeyValue.fromString("bb")))
+                .build();
+        RowPutChange change1 = new RowPutChange(CST,
+                primaryKey1);
+        change1.addColumn(new Column("co0", ColumnValue.fromBoolean(false)));
+        change1.addColumn(new Column("co1", ColumnValue.fromString("b")));
+        change1.addColumn(new Column("co2", ColumnValue.fromLong(2)));
+        putRowRequest.addRowChange(change1);
+        syncClient.batchWriteRow(putRowRequest);
+
+
+
+        BatchGetRowRequest batchGetRowRequest = new BatchGetRowRequest();
+        MultiRowQueryCriteria queryCriteria = new MultiRowQueryCriteria(CST);
+        queryCriteria.addRow(primaryKey0);
+        queryCriteria.addRow(primaryKey1);
+
+        batchGetRowRequest.addMultiRowQueryCriteria(queryCriteria);
+        BatchGetRowResponse response = syncClient.batchGetRow(batchGetRowRequest);
+        Assert.assertEquals(2, response.getBatchGetRowResult(CST).size());
+        Assert.assertEquals(response.getBatchGetRowResult(CST).get(0).getRow().getLatestColumn("co0").getValue().asBoolean(), true);
+        Assert.assertEquals(response.getBatchGetRowResult(CST).get(0).getRow().getLatestColumn("co1").getValue().asString(), "a");
+        Assert.assertEquals(response.getBatchGetRowResult(CST).get(0).getRow().getLatestColumn("co2").getValue().asLong(), 1);
+        Assert.assertEquals(response.getBatchGetRowResult(CST).get(1).getRow().getLatestColumn("co0").getValue().asBoolean(), false);
+        Assert.assertEquals(response.getBatchGetRowResult(CST).get(1).getRow().getLatestColumn("co1").getValue().asString(), "b");
+        Assert.assertEquals(response.getBatchGetRowResult(CST).get(1).getRow().getLatestColumn("co2").getValue().asLong(), 2);
+    }
 
     @Test
-    public void testGetRow(){
+    public void testGetRow() {
         createTable();
 
         PutRowRequest putRowRequest = new PutRowRequest();
@@ -166,7 +214,7 @@ public class TestMockSyncClient {
 
 
     @Test
-    public void testGetRowWithVersion(){
+    public void testGetRowWithVersion() {
         createTable();
         PutRowRequest putRowRequest = new PutRowRequest();
         PrimaryKey primaryKey = PrimaryKeyBuilder
@@ -203,7 +251,7 @@ public class TestMockSyncClient {
 
 
     @Test
-    public void testPutAgainRow(){
+    public void testPutAgainRow() {
         createTable();
 
         PutRowRequest putRowRequest = new PutRowRequest();
@@ -271,7 +319,7 @@ public class TestMockSyncClient {
     }
 
     @Test
-    public void testUpdateRow(){
+    public void testUpdateRow() {
         createTable();
         PutRowRequest putRowRequest = new PutRowRequest();
         PrimaryKey primaryKey = PrimaryKeyBuilder
@@ -327,7 +375,7 @@ public class TestMockSyncClient {
 
 
     @Test
-    public void testUpdateRowWithVersion(){
+    public void testUpdateRowWithVersion() {
         createTable();
         PutRowRequest putRowRequest = new PutRowRequest();
         PrimaryKey primaryKey = PrimaryKeyBuilder

@@ -30,20 +30,11 @@ public class SimpleInMemoryTableStore {
     Map<String, TableMeta> tableMetaMap = new HashMap<>();
 
 
-    public Map<String, InMemoryTableInstance> getMetaInMemoryTableInstances() {
-        return metaInMemoryTableInstances;
-    }
-
-    /**
-     * 所有的表的内存实例
-     * Key TableName
-     * value stored data.
-     */
-    Map<String, InMemoryTableInstance> metaInMemoryTableInstances = new HashMap<>();
+    InMemoryTableInstanceManager inMemoryTableInstanceManager;
 
 
     public SimpleInMemoryTableStore(){
-
+        inMemoryTableInstanceManager = new InMemoryTableInstanceManager();
     }
 
     public List<TableMeta> getMetas() {
@@ -58,7 +49,7 @@ public class SimpleInMemoryTableStore {
         Preconditions.checkArgument(meta != null, "The tablemeta should not be null.");
         this.getMetas().add(meta);
         this.getTableMetaMap() .put(meta.getTableName(), meta);
-        this.getMetaInMemoryTableInstances().put(meta.getTableName(), new InMemoryTableInstance(meta));
+        this.inMemoryTableInstanceManager.addInstance(meta.getTableName());
     }
 
     public TableMeta getTableMeta(String tableName) {
@@ -68,23 +59,7 @@ public class SimpleInMemoryTableStore {
 
     public InMemoryTableInstance getInMemoryTableInstance(String tableName) {
         Preconditions.checkArgument(tableName != null && !"".equals(tableName), "The name of table name should not be null or empty.");
-        return this.getMetaInMemoryTableInstances().get(tableName);
-    }
-
-
-    public UpdateRowResponse noConditionUpdateRow(UpdateRowRequest updateRowRequest) {
-        String tableName = updateRowRequest.getRowChange().getTableName();
-        return this.getMetaInMemoryTableInstances().get(tableName).noConditionUpdateRow(updateRowRequest);
-    }
-
-    public PutRowResponse noConditionPutRow(PutRowRequest putRowRequest) {
-        String tableName = putRowRequest.getRowChange().getTableName();
-        return this.getMetaInMemoryTableInstances().get(tableName).noConditionPutRow(putRowRequest);
-    }
-
-    public GetRowResponse noConditionGetRow(GetRowRequest getRowRequest) {
-        String tableName = getRowRequest.getRowQueryCriteria().getTableName();
-        return this.getMetaInMemoryTableInstances().get(tableName).noConditionGetRow(getRowRequest);
+        return this.inMemoryTableInstanceManager.getInstance(tableName);
     }
 
     public CreateTableResponse createTable(CreateTableRequest createTableRequest)
@@ -116,12 +91,12 @@ public class SimpleInMemoryTableStore {
         TableMeta meta = this.tableMetaMap.get(tableName);
         this.metas.remove(meta);
         this.tableMetaMap.remove(tableName);
-        this.metaInMemoryTableInstances.remove(tableName);
+        this.inMemoryTableInstanceManager.clear(tableName);
     }
 
     public void clean(){
         this.metas.clear();
         this.tableMetaMap.clear();
-        this.metaInMemoryTableInstances.clear();
+        this.inMemoryTableInstanceManager.clear();
     }
 }
